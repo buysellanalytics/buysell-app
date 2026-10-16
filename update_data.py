@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Публичные данные для веб-версии Buy&Sell (запускает задача GitHub раз в 6 часов):
-fx.json   — курсы ЦБ РФ по дням (рублей за 1 USD, EUR, CNY) с 2023 года; cbr.ru не отдаёт их страницам напрямую;
+fx.json   — курсы по дням с 2023 года: ЦБ РФ (рублей за 1 USD, EUR, CNY) и ЕЦБ (поле "X": единиц валюты за 1 USD, через api.frankfurter.dev);
+            cbr.ru не отдаёт их страницам напрямую;
 news.json — заголовки Holder.io (RSS);
 rates.json — ставки OKX Simple Earn (публичная сводка; OKX не отдаёт её страницам напрямую). Ни ключей, ни личных данных здесь нет."""
 import datetime as dt
@@ -15,6 +16,8 @@ import xml.etree.ElementTree as ET
 HERE = os.path.dirname(os.path.abspath(__file__))
 UA = "Mozilla/5.0 BuySell-site/1.0"
 CODES = {"USD": "R01235", "EUR": "R01239", "CNY": "R01375"}
+# валюты ЕЦБ для пользователей из других стран (рубль — по ЦБ РФ)
+ECB = "EUR,GBP,CHF,JPY,CNY,AUD,CAD,BRL,MXN,INR,KRW,TRY,PLN,SGD,HKD,ZAR"
 
 
 def get(url):
@@ -34,8 +37,21 @@ def fx():
             day = dt.datetime.strptime(rec.get("Date"), "%d.%m.%Y").strftime("%Y-%m-%d")
             val = float(rec.findtext("Value", "0").replace(",", ".")) / (float(rec.findtext("Nominal", "1").replace(",", ".")) or 1)
             data.setdefault(day, {})[ccy] = round(val, 4)
+    try:
+        ecb(data)
+    except Exception as e:  # ЕЦБ недоступен — курсы ЦБ всё равно сохраняем
+        print("fail ecb", e)
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(dict(sorted(data.items())), fh, separators=(",", ":"))
+
+
+def ecb(data):
+    """Официальные курсы ЕЦБ по рабочим дням: data[день]["X"] = {валюта: единиц за 1 USD}."""
+    have = [d for d in data if "X" in data[d]]
+    start = (dt.date.fromisoformat(max(have)) - dt.timedelta(days=10)).isoformat() if have else "2023-01-01"
+    d = json.loads(get("https://api.frankfurter.dev/v1/%s..?base=USD&symbols=%s" % (start, ECB)))
+    for day, rates in (d.get("rates") or {}).items():
+        data.setdefault(day, {})["X"] = {k: float("%.5g" % v) for k, v in rates.items()}
 
 
 def news():
