@@ -1,0 +1,17 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Buy&amp;Sell — проверка связи</title>
+<style>body{margin:0;background:#070b18;color:#e5e7eb;font:16px/1.5 -apple-system,system-ui,sans-serif;padding:20px}h1{font-size:22px;margin:0 0 6px}p{color:#9ca3af;margin:0 0 16px}table{width:100%;border-collapse:collapse;font-size:15px}td{padding:10px 6px;border-bottom:1px solid #1f2937}td:last-child{text-align:right;font-weight:600}.ok{color:#34d399}.bad{color:#f87171}.wait{color:#9ca3af}button{margin-top:18px;width:100%;padding:14px;border:0;border-radius:12px;background:#6366f1;color:#fff;font-size:16px;font-weight:600}#ip{margin-top:14px;font-size:13px;color:#9ca3af;word-break:break-all}</style></head>
+<body><h1>Проверка связи с сервером Buy&amp;Sell</h1><p>Откройте эту страницу <b>без VPN</b> и подождите до 1 минуты. Затем сделайте снимок экрана.</p>
+<table id="t"></table><div id="ip"></div><button id="again">Проверить ещё раз</button>
+<script>
+var API='https://api.buysellanalytics.com',T=document.getElementById('t');
+var tests=[['Сайт программы (GitHub)',location.origin+'/sw.js?t='],['Сервер: короткий ответ',API+'/?t='],['Сервер: 8 КБ',API+'/ping?kb=8&t='],['Сервер: 16 КБ',API+'/ping?kb=16&t='],['Сервер: 32 КБ',API+'/ping?kb=32&t='],['Сервер: 128 КБ',API+'/ping?kb=128&t='],['Сервер: 512 КБ',API+'/ping?kb=512&t=']];
+function row(n){var r=T.insertRow();r.insertCell().textContent=n;var c=r.insertCell();c.textContent='…';c.className='wait';return c}
+async function one(name,url){var c=row(name),t0=Date.now(),ac=new AbortController(),tm=setTimeout(function(){ac.abort()},20000);
+ try{var r=await fetch(url+Date.now(),{cache:'no-store',signal:ac.signal});var b=await r.text();clearTimeout(tm);var s=((Date.now()-t0)/1000).toFixed(1);
+  if(r.ok){c.textContent='✓ '+s+' с · '+Math.round(b.length/1024)+' КБ';c.className='ok'}else{c.textContent='✗ ответ '+r.status;c.className='bad'}}
+ catch(e){clearTimeout(tm);c.textContent=ac.signal.aborted?'✗ завис (20 с)':'✗ нет связи';c.className='bad'}}
+async function run(){T.innerHTML='';for(var i=0;i<tests.length;i++)await one(tests[i][0],tests[i][1]);
+ try{var r=await fetch(API+'/?t='+Date.now(),{cache:'no-store'});document.getElementById('ip').textContent='Время проверки: '+new Date().toLocaleString('ru-RU')+' · '+navigator.userAgent.slice(0,90)}catch(e){}}
+document.getElementById('again').onclick=run;run();
+</script></body></html>
