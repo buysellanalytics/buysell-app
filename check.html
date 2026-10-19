@@ -5,13 +5,15 @@
 <table id="t"></table><div id="ip"></div><button id="again">Проверить ещё раз</button>
 <script>
 var API='https://api.buysellanalytics.com',T=document.getElementById('t');
-var tests=[['Сайт программы (GitHub)',location.origin+'/sw.js?t='],['Сервер: короткий ответ',API+'/?t='],['Сервер: 8 КБ',API+'/ping?kb=8&t='],['Сервер: 16 КБ',API+'/ping?kb=16&t='],['Сервер: 32 КБ',API+'/ping?kb=32&t='],['Сервер: 128 КБ',API+'/ping?kb=128&t='],['Сервер: 512 КБ',API+'/ping?kb=512&t=']];
+var R=API+'/ping?rnd=1&kb=',tests=[['Сайт программы (GitHub)',location.origin+'/sw.js?t='],['Сервер: короткий ответ',API+'/?t='],['Сервер: 16 КБ',R+'16&t='],['Сервер: 24 КБ',R+'24&t='],['Сервер: 48 КБ',R+'48&t='],['Сервер: 64 КБ',R+'64&t='],['Сервер: 128 КБ',R+'128&t='],['Сервер: 512 КБ',R+'512&t=']];
 function row(n){var r=T.insertRow();r.insertCell().textContent=n;var c=r.insertCell();c.textContent='…';c.className='wait';return c}
 async function one(name,url){var c=row(name),t0=Date.now(),ac=new AbortController(),tm=setTimeout(function(){ac.abort()},20000);
  try{var r=await fetch(url+Date.now(),{cache:'no-store',signal:ac.signal});var b=await r.text();clearTimeout(tm);var s=((Date.now()-t0)/1000).toFixed(1);
   if(r.ok){c.textContent='✓ '+s+' с · '+Math.round(b.length/1024)+' КБ';c.className='ok'}else{c.textContent='✗ ответ '+r.status;c.className='bad'}}
  catch(e){clearTimeout(tm);c.textContent=ac.signal.aborted?'✗ завис (20 с)':'✗ нет связи';c.className='bad'}}
-async function run(){T.innerHTML='';for(var i=0;i<tests.length;i++)await one(tests[i][0],tests[i][1]);
+async function series(name,kb,n){var c=row(name),t0=Date.now(),got=0;for(var i=0;i<n;i++){var ac=new AbortController(),tm=setTimeout(function(){ac.abort()},15000);try{var r=await fetch(R+kb+'&s='+i+'&t='+Date.now(),{cache:'no-store',signal:ac.signal});await r.text();clearTimeout(tm);if(!r.ok)break;got++;c.textContent='… '+got+' из '+n}catch(e){clearTimeout(tm);break}}
+ var s=((Date.now()-t0)/1000).toFixed(1);c.textContent=(got===n?'✓ ':'✗ ')+got+' из '+n+' · '+s+' с';c.className=got===n?'ok':'bad'}
+async function run(){T.innerHTML='';for(var i=0;i<tests.length;i++)await one(tests[i][0],tests[i][1]);await series('Сервер: 20 частей по 16 КБ подряд',16,20);await series('Сервер: 10 частей по 24 КБ подряд',24,10);
  try{var r=await fetch(API+'/?t='+Date.now(),{cache:'no-store'});document.getElementById('ip').textContent='Время проверки: '+new Date().toLocaleString('ru-RU')+' · '+navigator.userAgent.slice(0,90)}catch(e){}}
 document.getElementById('again').onclick=run;run();
 </script></body></html>
